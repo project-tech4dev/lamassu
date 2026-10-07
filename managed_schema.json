@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "properties": {
+    "allowedDomains": {
+      "title": "Allowed domains",
+      "description": "Extra domains whose addresses are treated as internal, e.g. a partner organization. Exact domains (partner.org) or subdomain wildcards (*.example.org, which does not include example.org itself). gmail.com and googlemail.com are ignored. Default: empty.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "cacheMinutes": {
+      "title": "Cache duration (minutes)",
+      "description": "How long a folder's permissions are cached before being re-read. 0 disables caching. Default: 5.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "colors": {
+      "title": "Level colors",
+      "description": "Banner background colors as #rrggbb. Text color is chosen automatically for WCAG AA contrast. The Unknown level is always gray and cannot be changed.",
+      "type": "object",
+      "properties": {
+        "PUBLIC_DISCOVERABLE": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "PUBLIC_LINK": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "EXTERNAL": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "ORG_WIDE": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "INTERNAL": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "PRIVATE": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+      }
+    },
+    "publicLinkSameAsDiscoverable": {
+      "title": "Treat Public (link) as severe as Public (discoverable)",
+      "description": "When true, the Public (link) level uses the Public (discoverable) color and emphasis. Default: false.",
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lamassu: Visibility Guardian settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1 data-i18n="options.title"></h1>
+    <p class="help" data-i18n="options.intro"></p>
+
+    <form id="form" novalidate>
+      <section class="field" id="field-allowedDomains">
+        <label for="allowedDomains" data-i18n="options.allowedDomains"></label>
+        <p class="managed" hidden data-i18n="options.managed"></p>
+        <textarea id="allowedDomains" rows="5" spellcheck="false" autocomplete="off" aria-describedby="allowedDomains-help"></textarea>
+        <p class="help" id="allowedDomains-help" data-i18n="options.allowedDomainsHelp"></p>
+      </section>
+
+      <section class="field" id="field-cacheMinutes">
+        <label for="cacheMinutes" data-i18n="options.cacheMinutes"></label>
+        <p class="managed" hidden data-i18n="options.managed"></p>
+        <input id="cacheMinutes" type="number" min="0" max="1440" step="1" inputmode="numeric" aria-describedby="cacheMinutes-help">
+        <p class="help" id="cacheMinutes-help" data-i18n="options.cacheMinutesHelp"></p>
+      </section>
+
+      <section class="field" id="field-publicLinkSameAsDiscoverable">
+        <p class="managed" hidden data-i18n="options.managed"></p>
+        <label class="checkbox">
+          <input id="publicLinkSameAsDiscoverable" type="checkbox">
+          <span data-i18n="options.publicLinkSevere"></span>
+        </label>
+      </section>
+
+      <fieldset class="field">
+        <legend data-i18n="options.colors"></legend>
+        <p class="help" data-i18n="options.colorsHelp"></p>
+        <div id="colors" class="colors"></div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" class="primary" data-i18n="options.save"></button>
+        <button type="button" id="reset" data-i18n="options.reset"></button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <script src="../shared/strings.js"></script>
+  <script src="../shared/levels.js"></script>
+  <script src="../shared/domain.js"></script>
+  <script src="../shared/settings.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

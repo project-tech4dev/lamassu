@@ -1,0 +1,16 @@
+{
+  "name": "lamassu-visibility-guardian",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Internal Chrome extension that shows who can access the Google Drive folder being viewed.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.js'",
+    "check": "node scripts/check-source.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "package": "node scripts/check-source.mjs --release && node --test 'test/*.test.js' && node scripts/package.mjs"
+  }
+}

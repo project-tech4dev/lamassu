@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Lamassu: Visibility Guardian",
+  "short_name": "Lamassu",
+  "version": "1.0.0",
+  "description": "Shows who can access the Google Drive folder you are viewing. Read-only: never changes sharing, never reads file contents.",
+  "minimum_chrome_version": "116",
+  "permissions": ["identity", "storage"],
+  "host_permissions": ["https://www.googleapis.com/drive/v3/*"],
+  "oauth2": {
+    "client_id": "899584036865-v7i2vra98or25ifdfknvia2inb6etsna.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/drive.metadata.readonly"]
+  },
+  "background": {
+    "service_worker": "src/background/sw.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://drive.google.com/*"],
+      "js": [
+        "src/shared/strings.js",
+        "src/shared/levels.js",
+        "src/shared/icons.js",
+        "src/shared/drivepage.js",
+        "src/content/content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "Lamassu: Visibility Guardian",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "storage": {
+    "managed_schema": "managed_schema.json"
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://www.googleapis.com/drive/v3/; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  }
+}

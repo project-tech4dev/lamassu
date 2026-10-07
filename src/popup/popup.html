@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Folder sharing</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1 class="visually-hidden" data-i18n="popup.title"></h1>
+
+    <section id="summary" class="summary" role="status" aria-live="polite" aria-atomic="true">
+      <span class="summary-icon" id="summary-icon"></span>
+      <div>
+        <div class="summary-level" id="summary-level"></div>
+        <div class="summary-reason" id="summary-reason"></div>
+      </div>
+    </section>
+
+    <p id="message" class="message" hidden></p>
+
+    <dl class="meta" id="meta" hidden>
+      <div><dt data-i18n="popup.checkedAs"></dt><dd id="account"></dd></div>
+      <div id="drive-row" hidden><dt data-i18n="popup.driveAccount"></dt><dd id="drive-account"></dd></div>
+      <div><dt data-i18n="popup.lastChecked"></dt><dd id="checked"></dd></div>
+    </dl>
+
+    <div class="actions">
+      <button type="button" id="refresh" class="primary" data-i18n="popup.refresh" hidden></button>
+      <button type="button" id="signin" class="primary" data-i18n="popup.signIn" hidden></button>
+      <button type="button" id="options" class="secondary" data-i18n="popup.options"></button>
+    </div>
+
+    <div class="table-wrap" id="table-wrap" tabindex="0" hidden>
+      <table id="perms">
+        <caption id="caption"></caption>
+        <thead>
+          <tr>
+            <th scope="col" data-i18n="col.who"></th>
+            <th scope="col" data-i18n="col.type"></th>
+            <th scope="col" data-i18n="col.role"></th>
+            <th scope="col" data-i18n="col.access"></th>
+            <th scope="col" data-i18n="col.source"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="../shared/strings.js"></script>
+  <script src="../shared/levels.js"></script>
+  <script src="../shared/icons.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

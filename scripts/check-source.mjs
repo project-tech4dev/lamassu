@@ -1,5 +1,5 @@
-// Static checks over the packaged source for the security requirements
-// (S3, S4, S5, S8 and acceptance test 14). Exits non-zero on any violation.
+// Static checks over the packaged source: permissions, network endpoints,
+// GET-only requests, no eval or remote code. Exits non-zero on any violation.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, packagedFiles } from './files.mjs';
@@ -9,13 +9,13 @@ const fail = (file, msg) => problems.push(`${file}: ${msg}`);
 
 // URLs allowed to appear anywhere in shipped source, each with its reason.
 const ALLOWED_URLS = [
-  'https://www.googleapis.com/drive/v3', // the only API endpoint (S3)
+  'https://www.googleapis.com/drive/v3', // the only API endpoint
   'https://www.googleapis.com/drive/v3/', // CSP connect-src and host permission
-  'https://www.googleapis.com/drive/v3/*', // host permission (S4)
-  'https://www.googleapis.com/auth/drive.metadata.readonly', // OAuth scope identifier (S1)
+  'https://www.googleapis.com/drive/v3/*', // host permission
+  'https://www.googleapis.com/auth/drive.metadata.readonly', // OAuth scope identifier
   'https://drive.google.com', // origin check of the current page, never fetched
   'https://drive.google.com/', // sender origin check, never fetched
-  'https://drive.google.com/*', // content script match pattern (S4)
+  'https://drive.google.com/*', // content script match pattern
   'http://www.w3.org/2000/svg', // SVG XML namespace identifier, never fetched
 ];
 
@@ -30,9 +30,9 @@ const FORBIDDEN = [
   [/\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML|document\.write/, 'HTML string injection'],
   [/setTimeout\s*\(\s*['"`]|setInterval\s*\(\s*['"`]/, 'string timer'],
   [/chrome\.storage\.sync/, 'chrome.storage.sync'],
-  [/console\.(log|info|warn|error|debug)/, 'console logging (S7)'],
+  [/console\.(log|info|warn|error|debug)/, 'console logging'],
   [/\bimport\s*\(/, 'dynamic import'],
-  [/method\s*:\s*['"`](?!GET['"`])/i, 'non-GET HTTP method (S8)'],
+  [/method\s*:\s*['"`](?!GET['"`])/i, 'non-GET HTTP method'],
 ];
 
 const files = packagedFiles();
@@ -59,7 +59,7 @@ for (const rel of files) {
   }
 }
 
-// Manifest shape (S4, S5).
+// Manifest shape.
 const manifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 if (manifest.manifest_version !== 3) fail('manifest.json', 'must be Manifest V3');

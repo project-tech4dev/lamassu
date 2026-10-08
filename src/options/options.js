@@ -1,4 +1,4 @@
-// Options page (C3). Managed policy values win and are shown read-only.
+// Options page. Managed policy values win and are shown read-only.
 (() => {
   'use strict';
   const { t, levelName } = DV.strings;

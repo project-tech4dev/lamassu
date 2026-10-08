@@ -1,6 +1,6 @@
 // Pure decision logic used by the service worker, kept separate so it can be
-// unit-tested: which account checks block a lookup (U3, U4), whether a cached
-// entry may be served (F7), and which cache entries to evict (S7).
+// unit-tested: which account checks block a lookup, whether a cached
+// entry may be served, and which cache entries to evict.
 (function (root) {
   'use strict';
   const DV = root.DV || (root.DV = {});
@@ -9,9 +9,9 @@
   // identity: { email, domain } from about.get; driveEmail: from Drive's page.
   function accountBlock(identity, driveEmail) {
     if (!identity || !identity.email || !identity.domain) return 'identity_failed';
-    // U3: personal accounts never get an internal domain.
+    // Personal accounts never get an internal domain.
     if (DV.domain.isPersonalDomain(identity.domain)) return 'personal_account';
-    // U4: never show a level computed for a different account than Drive shows.
+    // Never show a level computed for a different account than Drive shows.
     if (typeof driveEmail !== 'string' || !driveEmail) return 'account_unconfirmed';
     if (driveEmail.toLowerCase() !== identity.email.toLowerCase()) return 'account_mismatch';
     return null;

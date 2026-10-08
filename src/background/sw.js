@@ -48,7 +48,7 @@ const api = DV.createDriveApi({
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 });
 
-// ---- Identity (U1, U2) -----------------------------------------------------
+// ---- Identity --------------------------------------------------------------
 
 // A short hash of the current token, so a new token (renewal or a different
 // account) triggers a fresh about.get. The token itself is never stored.
@@ -82,7 +82,7 @@ async function ensureIdentity() {
   }
 }
 
-// Clears the stored domain and every cached result (U2, S7), then tells open
+// Clears the stored domain and every cached result, then tells open
 // Drive tabs to re-check by bumping a counter in local storage (no PII).
 async function clearAccountData() {
   folderInflight.clear();
@@ -90,7 +90,7 @@ async function clearAccountData() {
   await chrome.storage.local.set({ epoch: Date.now() });
 }
 
-// ---- Cache (F7) ------------------------------------------------------------
+// ---- Cache -----------------------------------------------------------------
 // Caching is an optimisation: any storage failure is ignored so it can never
 // turn a successful lookup into Unknown. A small index ({key: fetchedAt}) is
 // kept so eviction never has to read every cached permission list.
@@ -244,7 +244,7 @@ function fromExtensionPage(sender) {
 
 // Unexpected exceptions are reported with their message (never an email
 // address: none of this code puts one in an error) so they can be diagnosed
-// from the popup, since S7 rules out logging.
+// from the popup, since the extension must not log.
 function errorDetail(e) {
   return String((e && e.message) || e || '').slice(0, 200);
 }
@@ -275,7 +275,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return false;
 });
 
-// U2 / acceptance test 20: a Chrome sign-in change discards the domain and cache.
+// A Chrome sign-in change discards the domain and cache.
 chrome.identity.onSignInChanged.addListener(() => {
   clearAccountData().catch(() => {});
 });

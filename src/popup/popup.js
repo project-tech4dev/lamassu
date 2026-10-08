@@ -1,4 +1,4 @@
-// Popup panel (F16 to F18). Talks to the content script in the active tab,
+// Popup panel. Talks to the content script in the active tab,
 // which holds the latest result for the folder on screen.
 (() => {
   'use strict';

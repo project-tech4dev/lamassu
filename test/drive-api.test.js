@@ -35,7 +35,7 @@ function setup(handler, opts) {
 
 const perm = (i, extra) => Object.assign({ id: 'p' + i, type: 'user', role: 'reader', emailAddress: `u${i}@example.org` }, extra);
 
-test('10. reads every page of a folder with more than 100 permissions (F5)', async () => {
+test('reads every page of a folder with more than 100 permissions', async () => {
   const all = Array.from({ length: 250 }, (_, i) => perm(i, { permissionDetails: [{ inherited: false }] }));
   const { api, calls } = setup((url) => {
     const start = Number(url.searchParams.get('pageToken') || 0);
@@ -54,7 +54,7 @@ test('10. reads every page of a folder with more than 100 permissions (F5)', asy
     'nextPageToken,permissions(id,type,role,emailAddress,domain,allowFileDiscovery,deleted,permissionDetails)');
 });
 
-test('every request is GET to the Drive v3 API with no credentials or referrer (S3, S8)', async () => {
+test('every request is GET to the Drive v3 API with no credentials or referrer', async () => {
   const { api, calls } = setup(() => response(200, { user: { emailAddress: 'Me@Example.org' } }));
   assert.equal(await api.getUserEmail(), 'me@example.org');
   const c = calls[0];
@@ -72,7 +72,7 @@ test('resource keys are sent in the documented header', async () => {
   assert.equal(calls[0].init.headers['X-Goog-Drive-Resource-Keys'], 'folder123/0-key');
 });
 
-test('inheritance comes from permissionDetails when present (F6)', async () => {
+test('inheritance comes from permissionDetails when present', async () => {
   const { api } = setup(() => response(200, { permissions: [
     perm(1, { permissionDetails: [{ inherited: true }] }),
     perm(2, { permissionDetails: [{ inherited: false }] }),
@@ -118,7 +118,7 @@ test('if the parent cannot be read, inheritance is unknown rather than guessed',
   assert.equal(perms[0].source, 'unknown');
 });
 
-test('F20: 401 renews the token once, then fails as auth_expired', async () => {
+test('401 renews the token once, then fails as auth_expired', async () => {
   const ok = setup((u, init, n) => (n === 1 ? response(401, {}) : response(200, { user: { emailAddress: 'a@example.org' } })));
   assert.equal(await ok.api.getUserEmail(), 'a@example.org');
   assert.deepEqual(ok.removed, ['token1']);
@@ -129,7 +129,7 @@ test('F20: 401 renews the token once, then fails as auth_expired', async () => {
   assert.equal(bad.calls.length, 2);
 });
 
-test('F21: 429 and rate-limit 403 back off exponentially, then succeed', async () => {
+test('429 and rate-limit 403 back off exponentially, then succeed', async () => {
   const { api, sleeps } = setup((u, init, n) => {
     if (n === 1) return response(429, {});
     if (n === 2) return response(403, { error: { errors: [{ reason: 'userRateLimitExceeded' }] } });
@@ -140,19 +140,19 @@ test('F21: 429 and rate-limit 403 back off exponentially, then succeed', async (
   assert.deepEqual(sleeps, [500, 1000, 2000]);
 });
 
-test('F21: Retry-After is honoured', async () => {
+test('Retry-After is honoured', async () => {
   const { api, sleeps } = setup((u, init, n) => (n === 1 ? response(429, {}, { 'Retry-After': '3' }) : response(200, { user: { emailAddress: 'a@example.org' } })));
   await api.getUserEmail();
   assert.deepEqual(sleeps, [3000]);
 });
 
-test('F21: persistent rate limiting gives up as rate_limited', async () => {
+test('persistent rate limiting gives up as rate_limited', async () => {
   const { api, calls } = setup(() => response(429, {}));
   await assert.rejects(api.getUserEmail(), { code: 'rate_limited' });
   assert.equal(calls.length, 5);
 });
 
-test('F21: 403 and 404 map to forbidden and not_found without retrying', async () => {
+test('403 and 404 map to forbidden and not_found without retrying', async () => {
   const f = setup(() => response(403, { error: { errors: [{ reason: 'insufficientFilePermissions' }] } }));
   await assert.rejects(f.api.listPermissions('folder1'), { code: 'forbidden' });
   assert.equal(f.calls.length, 1);
@@ -160,7 +160,7 @@ test('F21: 403 and 404 map to forbidden and not_found without retrying', async (
   await assert.rejects(n.api.listPermissions('folder1'), { code: 'not_found' });
 });
 
-test('12. network failure is reported, never treated as success', async () => {
+test('network failure is reported, never treated as success', async () => {
   const { api } = setup(() => { throw new TypeError('Failed to fetch'); });
   await assert.rejects(api.listPermissions('folder1'), { code: 'network' });
 });
@@ -206,7 +206,7 @@ test('the parent lookup is a single attempt, never retried', async () => {
   assert.deepEqual(sleeps, []);
 });
 
-test('N1: retries stop at the overall time budget', async () => {
+test('retries stop at the overall time budget', async () => {
   let clock = 0;
   const { api, sleeps } = setup(() => response(503, {}), {
     now: () => clock,
@@ -217,7 +217,7 @@ test('N1: retries stop at the overall time budget', async () => {
   assert.ok(clock < 2000, `waited ${clock} ms`);
 });
 
-test('N1: a request is never started after the budget has run out', async () => {
+test('a request is never started after the budget has run out', async () => {
   let clock = 0;
   const { api, calls } = setup(() => { clock += 5000; return response(200, { permissions: [perm(1)], nextPageToken: 'n' }); }, {
     now: () => clock,

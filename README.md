@@ -36,13 +36,13 @@ test/e2e/                Browser tests in Chromium with a fake Drive page and fa
 .github/workflows/       CI: unit tests, source checks, package hash, browser tests
 ```
 
-All user-visible strings are in `src/shared/strings.js` (requirement N3).
+All user-visible strings are in `src/shared/strings.js`.
 
 ## Dependencies
 
 **The shipped extension has none.** It is plain JavaScript with no bundler, transpiler or minifier, so the files in the package are the files in the repo. The build scripts and unit tests use only Node.js built-ins (Node 22 or later, see `.nvmrc`).
 
-There is one **development-only** dependency, pinned to an exact version in `package.json` with a committed `package-lock.json` (S6):
+There is one **development-only** dependency, pinned to an exact version in `package.json` with a committed `package-lock.json`:
 
 | Package | Version | Why |
 |---|---|---|
@@ -53,7 +53,7 @@ There is one **development-only** dependency, pinned to an exact version in `pac
 ```sh
 npm test            # unit tests
 npm run e2e         # browser tests (first run: npm install && npx playwright install chromium)
-npm run check       # static security checks on the shipped source (S3 to S5, S8, test 14)
+npm run check       # static security checks on the shipped source
 npm run package     # check --release (also rejects the placeholder client ID), test, then build dist/lamassu-visibility-guardian-<version>.zip
 npm run icons       # regenerate icons/*.png (only needed if the icon design changes)
 ```
@@ -67,7 +67,7 @@ npm run icons       # regenerate icons/*.png (only needed if the icon design cha
    - For local development, load the unpacked folder once, copy the ID from `chrome://extensions`, and keep loading from the same path. Alternatively, add a `"key"` to `manifest.json`.
 2. **In the organization's own Google Cloud project:**
    1. Enable the **Google Drive API**.
-   2. Under **OAuth consent screen**, set *User type* to **Internal** (S2). Add the scope `https://www.googleapis.com/auth/drive.metadata.readonly` and no other.
+   2. Under **OAuth consent screen**, set *User type* to **Internal**. Add the scope `https://www.googleapis.com/auth/drive.metadata.readonly` and no other.
    3. Under **Credentials**, choose *Create credentials*, then *OAuth client ID*, then *Application type: Chrome Extension*. Enter the extension ID as the *Item ID*.
 3. **Put the client ID** into `manifest.json` at `oauth2.client_id`. `npm run package` refuses to build while the placeholder is still there.
 4. **Allow the client in the Admin console.** Go to *Menu*, then *Security*, then *Access and data control*, then *API controls*. Use one of these options:
@@ -75,13 +75,13 @@ npm run icons       # regenerate icons/*.png (only needed if the icon design cha
    - **Trust all internal apps.** Under *Settings*, check **Trust internal apps**. This allows every app owned by your organization, not just this one.
 
    This step is required if Drive is a restricted service in your domain, or if unconfigured third-party apps are blocked. Otherwise the extension may work without it, but configuring it explicitly keeps it working if those settings change later. Google has renamed these links before, so if the labels differ, see Google's help page [Control which apps access Google Workspace data](https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data).
-5. **Deploy** by force-installing it with *Chrome browser*, *Apps & extensions*, *Users & browsers*, using the Web Store item ID or a self-hosted CRX (S9).
+5. **Deploy** by force-installing it with *Chrome browser*, *Apps & extensions*, *Users & browsers*, using the Web Store item ID or a self-hosted CRX.
 
 Authentication uses `chrome.identity.getAuthToken`, which issues tokens for the Google account signed in to the **Chrome profile**. Users must be signed in to Chrome with their Workspace account. Managed Chrome profiles already are. On first use, the banner shows *Unknown: sign-in needed*. Clicking the toolbar icon and then **Sign in** shows Google's consent prompt once.
 
 ## Configuration
 
-Settings come from three layers. An admin policy wins over the options page, which wins over the defaults (C1 to C3).
+Settings come from three layers. An admin policy wins over the options page, which wins over the defaults.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
@@ -90,7 +90,7 @@ Settings come from three layers. An admin policy wins over the options page, whi
 | `colors` | object | see above | `#rrggbb` per level: `PUBLIC_DISCOVERABLE`, `PUBLIC_LINK`, `EXTERNAL`, `ORG_WIDE`, `INTERNAL`, `PRIVATE`. Unknown is always gray. |
 | `publicLinkSameAsDiscoverable` | boolean | `false` | Gives Public (link) the same color and emphasis as Public (discoverable). |
 
-There is **no organization-domain setting**. The internal domain is always the domain of the signed-in user's account, read at runtime (F8).
+There is **no organization-domain setting**. The internal domain is always the domain of the signed-in user's account, read at runtime.
 
 ### Pushing settings by policy
 
@@ -108,15 +108,15 @@ Keys set by policy are shown read-only on the options page.
 
 ## How it works
 
-1. **Folder detection (F1 to F3).** The content script reads the folder ID from `/drive/[u/N/]folders/<id>`. Drive is a single-page app, and a content script cannot hook the page's `history` calls, so the script compares `location.href` every 300 ms and on `popstate`. That is one string comparison per tick. Other pages hide the banner.
-2. **Which account Drive is showing (U4).** The content script reads the address from the `aria-label` of Drive's Google Account button. It looks for the link to `accounts.google.com/SignOutOptions` and the address inside it, which appears in every locale. The service worker compares that address with the account the extension authenticated as, using `about.get`. If they differ, or if Drive's address cannot be found, or if more than one address is found, the banner shows **Unknown** and nothing is fetched. A level is never computed for the wrong account. The trade-off is that if Google changes that header, the banner shows Unknown everywhere (with the reason *could not confirm which Google account Drive is showing*) until the selector in `src/shared/drivepage.js` is updated.
-3. **Identity (U1 to U3).** `about.get?fields=user(emailAddress)` runs whenever the OAuth token changes (detected by a hash of the token) and after any Chrome sign-in change. The domain is stored in `chrome.storage.session`. If the account changes, all cached results are discarded. Personal accounts (`gmail.com`, `googlemail.com`) show Unknown.
-4. **Permissions (F4 to F7).** `permissions.list` with `supportsAllDrives=true`, `pageSize=100` and only the required fields, following `nextPageToken` until done. Drive returns `permissionDetails` for shared-drive items, and the direct or inherited flag comes from it. For My Drive folders, where Drive does not return it, the client reads the parent folder's permissions (`files.get?fields=parents`, then `permissions.list` on the parent). A permission counts as inherited if the parent has the same permission ID with the same role. Because this is inferred, the banner says "likely inherited" and the popup shows "Inherited (inferred)". The parent is fetched in parallel with the folder's own permissions and is tried only once. If it cannot be read, the source shows as "—" and is never guessed. Raw permissions are cached in `chrome.storage.session` per folder and per account. Expired entries are deleted, and a failed cache write never affects the result. Classification is recomputed on every view, so changing the allowed list applies immediately.
-5. **Errors (F19 to F21).** A 401 drops the cached token and retries once with a fresh one. 429 responses, rate-limit 403s and 5xx responses back off exponentially (0.5 s, 1 s, 2 s, 4 s, honoring `Retry-After`). Each request times out after 10 s, and a whole folder lookup, retries included, stops after 8 s. Other 403s and 404s, network failures and timeouts all produce **Unknown** in gray with a short reason. Unexpected errors also show a short technical detail in the popup. A failed manual refresh also removes the cached entry, so an outage never shows a stale green state.
-6. **Banner (F11 to F15).** The banner is a compact pill in a closed shadow root, fixed at the top-center of Drive's `[role="main"]` landmark. It sits over the content instead of pushing it down. It uses the ARIA landmark rather than Drive's class names, which change often. If no landmark is found, it falls back to a floating badge in the bottom-right corner. A minimize button collapses it to that corner badge, in case it ever covers something. The text is in a polite live region for screen readers. Email addresses are never written into Drive's page. They exist only in extension memory and in the popup.
+1. **Folder detection.** The content script reads the folder ID from `/drive/[u/N/]folders/<id>`. Drive is a single-page app, and a content script cannot hook the page's `history` calls, so the script compares `location.href` every 300 ms and on `popstate`. That is one string comparison per tick. Other pages hide the banner.
+2. **Which account Drive is showing.** The content script reads the address from the `aria-label` of Drive's Google Account button. It looks for the link to `accounts.google.com/SignOutOptions` and the address inside it, which appears in every locale. The service worker compares that address with the account the extension authenticated as, using `about.get`. If they differ, or if Drive's address cannot be found, or if more than one address is found, the banner shows **Unknown** and nothing is fetched. A level is never computed for the wrong account. The trade-off is that if Google changes that header, the banner shows Unknown everywhere (with the reason *could not confirm which Google account Drive is showing*) until the selector in `src/shared/drivepage.js` is updated.
+3. **Identity.** `about.get?fields=user(emailAddress)` runs whenever the OAuth token changes (detected by a hash of the token) and after any Chrome sign-in change. The domain is stored in `chrome.storage.session`. If the account changes, all cached results are discarded. Personal accounts (`gmail.com`, `googlemail.com`) show Unknown.
+4. **Permissions.** `permissions.list` with `supportsAllDrives=true`, `pageSize=100` and only the required fields, following `nextPageToken` until done. Drive returns `permissionDetails` for shared-drive items, and the direct or inherited flag comes from it. For My Drive folders, where Drive does not return it, the client reads the parent folder's permissions (`files.get?fields=parents`, then `permissions.list` on the parent). A permission counts as inherited if the parent has the same permission ID with the same role. Because this is inferred, the banner says "likely inherited" and the popup shows "Inherited (inferred)". The parent is fetched in parallel with the folder's own permissions and is tried only once. If it cannot be read, the source shows as "—" and is never guessed. Raw permissions are cached in `chrome.storage.session` per folder and per account. Expired entries are deleted, and a failed cache write never affects the result. Classification is recomputed on every view, so changing the allowed list applies immediately.
+5. **Errors.** A 401 drops the cached token and retries once with a fresh one. 429 responses, rate-limit 403s and 5xx responses back off exponentially (0.5 s, 1 s, 2 s, 4 s, honoring `Retry-After`). Each request times out after 10 s, and a whole folder lookup, retries included, stops after 8 s. Other 403s and 404s, network failures and timeouts all produce **Unknown** in gray with a short reason. Unexpected errors also show a short technical detail in the popup. A failed manual refresh also removes the cached entry, so an outage never shows a stale green state.
+6. **Banner.** The banner is a compact pill in a closed shadow root, fixed at the top-center of Drive's `[role="main"]` landmark. It sits over the content instead of pushing it down. It uses the ARIA landmark rather than Drive's class names, which change often. If no landmark is found, it falls back to a floating badge in the bottom-right corner. A minimize button collapses it to that corner badge, in case it ever covers something. The text is in a polite live region for screen readers. Email addresses are never written into Drive's page. They exist only in extension memory and in the popup.
 7. **Toolbar badge.** The toolbar icon also shows a short badge (`PUB`, `LINK`, `EXT`, `?`, `ORG`, `INT`) in the level's color.
 
-## Decisions taken for section 8 (defaults; confirm with the owner)
+## Design decisions (defaults; confirm with the owner)
 
 | Question | Implemented default |
 |---|---|
@@ -124,15 +124,15 @@ Keys set by policy are shown read-only on the options page.
 | Subdomains of own domain internal? | **No.** Add `*.example.org` to the allowed list to opt in. |
 | Expand group membership? | **No.** Groups are classified by the group's own address. Expanding them would need the Admin SDK and an extra scope. |
 | Public (link) as severe as Public (discoverable)? | **No** by default (a lighter red without the double outline). Configurable with `publicLinkSameAsDiscoverable`. |
-| Phase 2 list-view indicator? | Not included (O1 and O2 are out of this release). |
+| Status icons on folders in list and grid view? | Not included in this release. |
 | Edge or other Chromium browsers? | Not targeted. `chrome.identity.getAuthToken` is Chrome-only, so Edge would need a `launchWebAuthFlow` variant. |
 
-Two choices go beyond what the requirements specify:
+Two further choices:
 
 - A `domain` permission for an **allowed** partner domain is classified **Organization-wide** ("everyone at partner.org (allowed domain)…") rather than Internal, because it grants access to a whole organization.
 - **Unknown ranks above Organization-wide and Internal but below External and Public.** A permission the extension cannot classify never hides behind a green state, but a definite external share is still reported as External.
 
-## Releasing (S9)
+## Releasing
 
 1. Bump `version` in `manifest.json` and `package.json`.
 2. Run `npm run package` and note the SHA-256. CI does the same on every push and publishes the zip and its hash as a build artifact.

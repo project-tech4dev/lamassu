@@ -3,14 +3,14 @@ const assert = require('node:assert/strict');
 const DV = require('./helpers.js');
 const { parseFolderUrl, extractAccountEmail } = DV.drivePage;
 
-test('folder URLs are recognised in My Drive, shared drives and multi-account paths (F1)', () => {
+test('folder URLs are recognised in My Drive, shared drives and multi-account paths', () => {
   assert.deepEqual(parseFolderUrl('https://drive.google.com/drive/folders/1AbC_d-EfGh'), { folderId: '1AbC_d-EfGh', resourceKey: null });
   assert.deepEqual(parseFolderUrl('https://drive.google.com/drive/u/2/folders/0ABcdEFgh12Uk9PVA'), { folderId: '0ABcdEFgh12Uk9PVA', resourceKey: null });
   assert.deepEqual(parseFolderUrl('https://drive.google.com/drive/folders/1AbCdEf?usp=sharing'), { folderId: '1AbCdEf', resourceKey: null });
   assert.deepEqual(parseFolderUrl('https://drive.google.com/drive/folders/1AbCdEf?resourcekey=0-abc_DEF'), { folderId: '1AbCdEf', resourceKey: '0-abc_DEF' });
 });
 
-test('non-folder pages are ignored (F3)', () => {
+test('non-folder pages are ignored', () => {
   for (const url of [
     'https://drive.google.com/drive/my-drive',
     'https://drive.google.com/drive/u/0/home',
@@ -31,7 +31,7 @@ test('invalid resource keys are dropped', () => {
   assert.equal(parseFolderUrl('https://drive.google.com/drive/folders/1AbCdEf?resourcekey=a/b').resourceKey, null);
 });
 
-test('the Drive account is read from the account button label (U4)', () => {
+test('the Drive account is read from the account button label', () => {
   assert.equal(extractAccountEmail(['Google Account: Ada Lovelace  \n(Ada@Example.org)']), 'ada@example.org');
   assert.equal(extractAccountEmail(['Compte Google : Ada (ada@example.org)', 'ada@example.org']), 'ada@example.org');
 });

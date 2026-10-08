@@ -1,4 +1,4 @@
-// Email-domain extraction and allowed-domain matching (F9, F10, U3, U5).
+// Email-domain extraction and allowed-domain matching.
 (function (root) {
   'use strict';
   const DV = root.DV || (root.DV = {});

@@ -4,7 +4,7 @@ const DV = require('./helpers.js');
 const L = DV.levels;
 const S = DV.settings;
 
-test('every default level color meets WCAG AA with its text color (F13)', () => {
+test('every default level color meets WCAG AA with its text color', () => {
   for (const level of L.ORDER) {
     const { bg, fg } = L.colorsFor(level, S.DEFAULTS);
     assert.ok(L.contrast(bg, fg) >= 4.5, `${level} ${bg}/${fg} = ${L.contrast(bg, fg).toFixed(2)}`);
@@ -17,7 +17,7 @@ test('any custom color still gets AA text', () => {
   }
 });
 
-test('Unknown is always neutral gray regardless of configuration (F19)', () => {
+test('Unknown is always neutral gray regardless of configuration', () => {
   const s = { colors: { UNKNOWN: '#00ff00', INTERNAL: '#00ff00' } };
   assert.equal(L.colorsFor('UNKNOWN', s).bg, L.NEUTRAL_COLOR);
   assert.equal(L.colorsFor('INTERNAL', s).bg, '#00ff00');
@@ -59,7 +59,7 @@ test('settings sanitize valid values and report invalid ones', () => {
   assert.ok(S.sanitize({ cacheMinutes: 5000 }).invalidCache);
 });
 
-test('managed values override local values, which override defaults (C1, C3)', () => {
+test('managed values override local values, which override defaults', () => {
   const m = S.merge(
     { allowedDomains: ['admin.org'], colors: { EXTERNAL: '#111111' } },
     { allowedDomains: ['user.org'], cacheMinutes: 1, colors: { EXTERNAL: '#222222', INTERNAL: '#333333' } }

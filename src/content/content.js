@@ -27,7 +27,7 @@
 
   const banner = createBanner();
 
-  // ---- Messaging ----------------------------------------------------------
+  // ---- Messaging ---------------------------------------------------------
 
   function contextAlive() {
     try {
@@ -50,7 +50,7 @@
     }
   }
 
-  // ---- Account shown by Drive (U4) -----------------------------------------
+  // ---- Account shown by Drive --------------------------------------------
 
   function readDriveAccount() {
     const labels = [];
@@ -72,7 +72,7 @@
     }
   }
 
-  // ---- Status updates -----------------------------------------------------
+  // ---- Status updates ----------------------------------------------------
 
   function sameFolder(a, b) {
     return !!a && !!b && a.folderId === b.folderId && a.resourceKey === b.resourceKey;
@@ -130,7 +130,7 @@
     return p;
   }
 
-  // ---- Navigation (F2) ----------------------------------------------------
+  // ---- Navigation --------------------------------------------------------
   // Drive is a single-page app and content scripts cannot hook the page's
   // history calls, so the URL is compared on a short timer and on popstate.
 
@@ -181,7 +181,7 @@
     banner.destroy();
   }
 
-  // ---- Banner (F11 to F15) ------------------------------------------------
+  // ---- Banner ------------------------------------------------------------
 
   function createBanner() {
     const CSS = `
@@ -288,7 +288,7 @@
     }
 
     // The anchor is Drive's main landmark, which is part of its accessibility
-    // contract and far more stable than its generated class names (F14).
+    // contract and far more stable than its generated class names.
     function findAnchor() {
       let best = null;
       let bestArea = 0;
@@ -323,7 +323,7 @@
         s.transform = 'translateX(-50%)';
         s.maxWidth = Math.max(200, Math.round(Math.min(r.width - 32, 760))) + 'px';
       } else {
-        // F15 fallback (and minimized state): floating badge in a corner.
+        // Fallback (and minimized state): floating badge in a corner.
         s.top = 'auto';
         s.left = 'auto';
         s.right = '16px';

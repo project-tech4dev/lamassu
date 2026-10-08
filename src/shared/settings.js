@@ -1,4 +1,4 @@
-// Settings (section 5): defaults < options page (chrome.storage.local) < admin
+// Settings: defaults < options page (chrome.storage.local) < admin
 // policy (chrome.storage.managed). No email addresses are ever stored here.
 (function (root) {
   'use strict';

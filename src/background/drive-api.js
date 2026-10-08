@@ -1,6 +1,6 @@
-// Drive API v3 client. GET only (S8), fixed base URL (S3), pagination (F5),
-// one token renewal on 401 (F20), backoff on 429 / rate-limit 403 / 5xx (F21),
-// and an overall time budget per folder lookup (N1).
+// Drive API v3 client. GET only, fixed base URL, pagination,
+// one token renewal on 401, backoff on 429 / rate-limit 403 / 5xx,
+// and an overall time budget per folder lookup.
 (function (root) {
   'use strict';
   const DV = root.DV || (root.DV = {});
@@ -187,7 +187,7 @@
     }
 
     // Reads every permission on the folder and marks each one direct or
-    // inherited (F6). Drive returns permissionDetails for shared-drive items.
+    // inherited. Drive returns permissionDetails for shared-drive items.
     // When it is absent (My Drive), inheritance is inferred: a permission is
     // treated as inherited if the parent folder holds the same permission ID
     // with the same role, and is flagged `sourceInferred` so the UI can say so.

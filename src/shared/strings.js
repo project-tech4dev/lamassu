@@ -1,4 +1,4 @@
-// All user-visible English strings live in this file (N3). To translate, replace
+// All user-visible English strings live in this file. To translate, replace
 // the MESSAGES table; keys ending in _one / _other are plural forms selected by
 // the `count` variable.
 (function (root) {

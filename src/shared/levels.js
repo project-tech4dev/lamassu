@@ -30,7 +30,7 @@
     PRIVATE: '#1967d2',
   };
 
-  // Unknown (and the loading state) is always neutral gray and not configurable (F19).
+  // Unknown (and the loading state) is always neutral gray and not configurable.
   const NEUTRAL_COLOR = '#5f6368';
 
   const CONFIGURABLE = Object.keys(DEFAULT_COLORS);
@@ -65,7 +65,7 @@
   }
 
   // Picks black or white text, whichever contrasts more. One of the two always
-  // reaches at least 4.58:1, so any background color stays AA-compliant (F13).
+  // reaches at least 4.58:1, so any background color stays AA-compliant.
   function textColorFor(bg) {
     return contrast(bg, '#ffffff') >= contrast(bg, '#000000') ? '#ffffff' : '#000000';
   }

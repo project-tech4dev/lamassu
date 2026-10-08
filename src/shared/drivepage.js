@@ -1,5 +1,5 @@
-// Helpers for reading the Drive page: folder URL parsing (F1, F3) and the
-// account Drive is displaying (U4).
+// Helpers for reading the Drive page: folder URL parsing and the
+// account Drive is displaying.
 (function (root) {
   'use strict';
   const DV = root.DV || (root.DV = {});

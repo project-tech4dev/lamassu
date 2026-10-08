@@ -1,4 +1,4 @@
-// Folder classification (section 3.3). Pure function of the permission list,
+// Folder classification. Pure function of the permission list,
 // the signed-in user's domain and the allowed-domains list.
 (function (root) {
   'use strict';
@@ -33,7 +33,7 @@
       e.level = e.allowFileDiscovery ? 'PUBLIC_DISCOVERABLE' : 'PUBLIC_LINK';
       e.access = e.allowFileDiscovery ? 'public_discoverable' : 'public_link';
     } else if (e.type === 'user' || e.type === 'group') {
-      // Groups are classified by the group's own address (F10).
+      // Groups are classified by the group's own address.
       const d = domainOfEmail(e.emailAddress);
       e.domain = d;
       if (d && (d === userDomain || isAllowed(d))) {
@@ -111,7 +111,7 @@
   //   ('direct' | 'inherited' | 'both' | 'unknown') attached.
   // ctx: { userDomain, allowedDomains }
   // Returns { level, reason: {key, vars, inherited}, entries } with entries sorted
-  // external and public first (F17).
+  // external and public first.
   function classify(permissions, ctx) {
     const userDomain = normalizeDomain(ctx && ctx.userDomain);
     if (!userDomain) {

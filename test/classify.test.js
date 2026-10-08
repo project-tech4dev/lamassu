@@ -1,4 +1,4 @@
-// Covers the classification half of the acceptance tests in section 7.
+// Classification of folders by who can access them.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const DV = require('./helpers.js');
@@ -10,30 +10,30 @@ const owner = { id: 'o1', type: 'user', role: 'owner', emailAddress: 'owner@exam
 const user = (email, extra) => Object.assign({ id: email, type: 'user', role: 'writer', emailAddress: email, source: 'direct' }, extra);
 const text = (r) => DV.strings.levelName(r.level) + ': ' + describeReason(r.reason);
 
-test('1. owner only is Private', () => {
+test('owner only is Private', () => {
   const r = classify([owner], ctx);
   assert.equal(r.level, 'PRIVATE');
   assert.equal(text(r), 'Private: only the owner has access');
 });
 
-test('2. one address on own domain is Internal', () => {
+test('one address on own domain is Internal', () => {
   const r = classify([owner, user('a@example.org')], ctx);
   assert.equal(r.level, 'INTERNAL');
   assert.equal(text(r), 'Internal: shared with 1 person or group at example.org');
 });
 
-test('3. one address on a different domain is External', () => {
+test('one address on a different domain is External', () => {
   const r = classify([owner, user('a@example.org'), user('x@other.com'), user('y@other.com')], ctx);
   assert.equal(r.level, 'EXTERNAL');
   assert.equal(text(r), 'External: shared with 2 addresses outside example.org');
 });
 
-test('4. group on a different domain is External', () => {
+test('group on a different domain is External', () => {
   const r = classify([owner, { id: 'g', type: 'group', role: 'reader', emailAddress: 'team@partner.org' }], ctx);
   assert.equal(r.level, 'EXTERNAL');
 });
 
-test('5. whole organization, by link and discoverable, is Organization-wide', () => {
+test('whole organization, by link and discoverable, is Organization-wide', () => {
   const link = classify([owner, { id: 'd', type: 'domain', role: 'reader', domain: 'example.org', allowFileDiscovery: false }], ctx);
   assert.equal(link.level, 'ORG_WIDE');
   assert.equal(text(link), 'Organization-wide: everyone at example.org can open this folder');
@@ -42,17 +42,17 @@ test('5. whole organization, by link and discoverable, is Organization-wide', ()
   assert.match(text(disc), /can find and open/);
 });
 
-test('6. anyone with the link is Public (link)', () => {
+test('anyone with the link is Public (link)', () => {
   const r = classify([owner, { id: 'anyoneWithLink', type: 'anyone', role: 'reader', allowFileDiscovery: false }], ctx);
   assert.equal(r.level, 'PUBLIC_LINK');
 });
 
-test('7. discoverable by anyone is Public (discoverable)', () => {
+test('discoverable by anyone is Public (discoverable)', () => {
   const r = classify([owner, { id: 'anyone', type: 'anyone', role: 'reader', allowFileDiscovery: true }], ctx);
   assert.equal(r.level, 'PUBLIC_DISCOVERABLE');
 });
 
-test('8. inherited public access is reported as inherited', () => {
+test('inherited public access is reported as inherited', () => {
   const r = classify([owner, { id: 'anyoneWithLink', type: 'anyone', role: 'reader', source: 'inherited' }], ctx);
   assert.equal(r.level, 'PUBLIC_LINK');
   assert.ok(r.reason.inherited);
@@ -61,14 +61,14 @@ test('8. inherited public access is reported as inherited', () => {
   assert.equal(anyoneEntry.source, 'inherited');
 });
 
-test('8b. not marked inherited when the deciding permission is also direct', () => {
+test('not marked inherited when the deciding permission is also direct', () => {
   const r = classify([owner,
     { id: 'anyoneWithLink', type: 'anyone', role: 'reader', source: 'inherited' },
     { id: 'anyone2', type: 'anyone', role: 'reader', source: 'direct' }], ctx);
   assert.ok(!r.reason.inherited);
 });
 
-test('9. shared drive members (no owner) classify normally', () => {
+test('shared drive members (no owner) classify normally', () => {
   const r = classify([
     { id: '1', type: 'user', role: 'organizer', emailAddress: 'm@example.org', source: 'inherited' },
     { id: '2', type: 'group', role: 'fileOrganizer', emailAddress: 'staff@example.org', source: 'inherited' },
@@ -82,7 +82,7 @@ test('highest-risk level wins', () => {
     { id: 'd', type: 'domain', role: 'reader', domain: 'example.org' },
     { id: 'anyone', type: 'anyone', role: 'reader', allowFileDiscovery: true }], ctx);
   assert.equal(r.level, 'PUBLIC_DISCOVERABLE');
-  assert.equal(r.entries[0].type, 'anyone', 'public entries sort first (F17)');
+  assert.equal(r.entries[0].type, 'anyone', 'public entries sort first');
   assert.equal(r.entries[1].access, 'external', 'then external');
 });
 
@@ -97,13 +97,13 @@ test('external owner makes the folder External', () => {
   assert.equal(r.level, 'EXTERNAL');
 });
 
-test('15. same folder classifies relative to each viewer’s own domain', () => {
+test('same folder classifies relative to each viewer’s own domain', () => {
   const perms = [{ id: 'o', type: 'user', role: 'owner', emailAddress: 'o@alpha.org' }, user('b@alpha.org')];
   assert.equal(classify(perms, { userDomain: 'alpha.org' }).level, 'INTERNAL');
   assert.equal(classify(perms, { userDomain: 'beta.org' }).level, 'EXTERNAL');
 });
 
-test('16. personal account is Unknown and never treats Gmail as internal', () => {
+test('personal account is Unknown and never treats Gmail as internal', () => {
   const r = classify([user('friend@gmail.com')], { userDomain: 'gmail.com' });
   assert.equal(r.level, 'UNKNOWN');
   assert.equal(describeReason(r.reason), 'Signed in with a personal account');
@@ -111,7 +111,7 @@ test('16. personal account is Unknown and never treats Gmail as internal', () =>
   assert.equal(r2.level, 'EXTERNAL', 'gmail.com cannot be allow-listed');
 });
 
-test('18. allow-listing a partner domain moves it to Internal, removing reverses it', () => {
+test('allow-listing a partner domain moves it to Internal, removing reverses it', () => {
   const perms = [owner, user('p@partner.org')];
   assert.equal(classify(perms, ctx).level, 'EXTERNAL');
   const allowed = classify(perms, { userDomain: 'example.org', allowedDomains: ['partner.org'] });
@@ -128,7 +128,7 @@ test('allow-listed partner domain permission is Organization-wide, not Internal'
   assert.equal(describeReason(r.reason), 'everyone at partner.org (allowed domain) can open this folder');
 });
 
-test('19. subdomain is External unless *.domain is allowed', () => {
+test('subdomain is External unless *.domain is allowed', () => {
   const perms = [owner, user('t@team.example.org')];
   assert.equal(classify(perms, ctx).level, 'EXTERNAL');
   assert.equal(classify(perms, { userDomain: 'example.org', allowedDomains: ['*.example.org'] }).level, 'INTERNAL');
@@ -158,7 +158,7 @@ test('empty or missing permission list is Unknown', () => {
   assert.equal(classify([owner], { userDomain: '' }).level, 'UNKNOWN');
 });
 
-test('8c. inferred inheritance is described as likely, not as fact', () => {
+test('inferred inheritance is described as likely, not as fact', () => {
   const r = classify([owner, { id: 'anyoneWithLink', type: 'anyone', role: 'reader', source: 'inherited', sourceInferred: true }], ctx);
   assert.ok(r.reason.inherited);
   assert.ok(r.reason.inheritedInferred);

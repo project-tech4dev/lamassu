@@ -79,57 +79,57 @@ const DRIVE_HTML = (email) => `<!doctype html><html><head><meta charset="utf-8">
   }
 
   await page.goto('https://drive.google.com/drive/folders/privateFolder1');
-  await expectLevel('1 owner only', 'PRIVATE');
+  await expectLevel('owner only', 'PRIVATE');
   await shot('01-private');
 
   await nav('/drive/folders/internalFolder1');
-  await expectLevel('2 internal, after in-page navigation', 'INTERNAL');
+  await expectLevel('internal, after in-page navigation', 'INTERNAL');
 
   await nav('/drive/u/0/folders/externalFolder1');
-  await expectLevel('3/4 external user and group', 'EXTERNAL', /2 addresses outside example\.org/);
+  await expectLevel('external user and group', 'EXTERNAL', /2 addresses outside example\.org/);
   record((await badge()) === 'EXT', 'toolbar badge for external', await badge());
   await shot('03-external');
 
   await nav('/drive/folders/orgFolder1');
-  await expectLevel('5 organization-wide (discoverable)', 'ORG_WIDE', /find and open/);
+  await expectLevel('organization-wide (discoverable)', 'ORG_WIDE', /find and open/);
 
   await nav('/drive/folders/publicChild1');
-  await expectLevel('6/8 public link, inherited (inferred in My Drive)', 'PUBLIC_LINK', /likely inherited/);
+  await expectLevel('public link, inherited (inferred in My Drive)', 'PUBLIC_LINK', /likely inherited/);
 
   await nav('/drive/folders/discoverable1');
-  await expectLevel('7 public discoverable', 'PUBLIC_DISCOVERABLE');
+  await expectLevel('public discoverable', 'PUBLIC_DISCOVERABLE');
   await shot('07-discoverable');
 
   await page.goBack();
-  await expectLevel('11 browser Back', 'PUBLIC_LINK');
+  await expectLevel('browser Back', 'PUBLIC_LINK');
 
   await nav('/drive/folders/bigFolder1');
-  await expectLevel('10 more than 100 permissions', 'INTERNAL', /250 people/);
+  await expectLevel('more than 100 permissions', 'INTERNAL', /250 people/);
 
   await nav('/drive/my-drive');
   await page.waitForTimeout(800);
   const display = await page.evaluate(() => getComputedStyle(document.querySelector('[data-lamassu-banner]')).display);
-  record(display === 'none' && (await badge()) === '', 'F3 no banner or badge on non-folder pages', `display=${display}`);
+  record(display === 'none' && (await badge()) === '', 'no banner or badge on non-folder pages', `display=${display}`);
 
   // 18: allow-list a partner domain, then remove it.
   await nav('/drive/folders/externalFolder1');
-  await expectLevel('18 before allow-listing', 'EXTERNAL');
+  await expectLevel('before allow-listing', 'EXTERNAL');
   await sw.evaluate(() => chrome.storage.local.set({ settings: { allowedDomains: ['other.com'] } }));
-  await expectLevel('18 allow-listed partner becomes internal', 'INTERNAL', /allowed/);
+  await expectLevel('allow-listed partner becomes internal', 'INTERNAL', /allowed/);
   await sw.evaluate(() => chrome.storage.local.remove('settings'));
-  await expectLevel('18 removed again becomes external', 'EXTERNAL');
+  await expectLevel('removed again becomes external', 'EXTERNAL');
 
   // 12: offline + manual refresh never shows a stale safe level.
   await sw.evaluate(() => { globalThis.__offline = true; });
   await nav('/drive/folders/discoverable1');
   await sw.evaluate(() => chrome.tabs.sendMessage(globalThis.__lastTabId, { type: 'dv:refresh' }));
-  await expectLevel('12 network blocked shows Unknown', 'UNKNOWN', /could not reach/);
+  await expectLevel('network blocked shows Unknown', 'UNKNOWN', /could not reach/);
   await shot('12-offline');
   await sw.evaluate(() => { globalThis.__offline = false; });
 
   // Regression: A -> B, refresh, back to A within one poll interval.
   await nav('/drive/folders/externalFolder1');
-  await expectLevel('11 quick return to previous folder after refresh', 'EXTERNAL');
+  await expectLevel('quick return to previous folder after refresh', 'EXTERNAL');
 
   // Popup renders the permission list for the Drive tab.
   const tabId = await sw.evaluate(() => globalThis.__lastTabId);
@@ -139,7 +139,7 @@ const DRIVE_HTML = (email) => `<!doctype html><html><head><meta charset="utf-8">
   await pop.waitForTimeout(800);
   await pop.screenshot({ path: path.join(SHOTS, 'popup.png'), fullPage: true });
   const rows = await pop.$$eval('#rows tr', (rs) => rs.map((r) => r.cells[3].innerText));
-  record(rows.join(',') === 'External,External,Internal', 'F16/F17 popup lists external entries first', rows.join(','));
+  record(rows.join(',') === 'External,External,Internal', 'popup lists external entries first', rows.join(','));
   record(await pop.$eval('#drive-row', (e) => e.hidden), 'popup hides the Drive account row when it matches');
   await pop.close();
 
@@ -155,13 +155,13 @@ const DRIVE_HTML = (email) => `<!doctype html><html><head><meta charset="utf-8">
   // 17: Drive shows a different account than the extension uses.
   driveEmail = 'someone@other-account.org';
   await page.goto('https://drive.google.com/drive/folders/internalFolder1');
-  await expectLevel('17 account mismatch shows Unknown', 'UNKNOWN', /different account/);
+  await expectLevel('account mismatch shows Unknown', 'UNKNOWN', /different account/);
 
   // 20 / 15: the extension's account changes; old domain and cache are discarded.
   driveEmail = 'new@second.org';
   await sw.evaluate(() => { globalThis.__token = 'tok2'; globalThis.__aboutEmail = 'new@second.org'; });
   await page.goto('https://drive.google.com/drive/folders/externalFolder1');
-  await expectLevel('20/15 new account classifies against its own domain', 'EXTERNAL', /outside second\.org/);
+  await expectLevel('new account classifies against its own domain', 'EXTERNAL', /outside second\.org/);
   const session = await sw.evaluate(() => chrome.storage.session.get('identity'));
   record(session.identity && session.identity.domain === 'second.org', '20 stored domain replaced', session.identity && session.identity.domain);
 
@@ -169,26 +169,26 @@ const DRIVE_HTML = (email) => `<!doctype html><html><head><meta charset="utf-8">
   driveEmail = 'me@gmail.com';
   await sw.evaluate(() => { globalThis.__token = 'tok3'; globalThis.__aboutEmail = 'me@gmail.com'; });
   await page.goto('https://drive.google.com/drive/folders/internalFolder1');
-  await expectLevel('16 personal account shows Unknown', 'UNKNOWN', /personal account/);
+  await expectLevel('personal account shows Unknown', 'UNKNOWN', /personal account/);
 
-  // F15: no [role=main] anchor -> floating corner badge.
+  // No [role=main] anchor -> floating corner badge.
   driveEmail = 'me@example.org';
   await sw.evaluate(() => { globalThis.__token = 'tok4'; globalThis.__aboutEmail = 'me@example.org'; });
   await page.goto('https://drive.google.com/drive/folders/externalFolder1');
-  await expectLevel('F15 before removing the anchor', 'EXTERNAL');
+  await expectLevel('before removing the anchor', 'EXTERNAL');
   await page.evaluate(() => document.getElementById('main').removeAttribute('role'));
   await page.waitForTimeout(1300);
   const pos = await page.evaluate(() => {
     const s = document.querySelector('[data-lamassu-banner]').style;
     return s.right + ' ' + s.bottom;
   });
-  record(pos === '16px 16px', 'F15 falls back to a corner badge', pos);
+  record(pos === '16px 16px', 'falls back to a corner badge', pos);
   await shot('f15-fallback');
 
   // 13: every request was a GET to the Drive v3 API.
   const log = await sw.evaluate(() => globalThis.__fetchLog);
   const bad = log.filter((l) => !l.url.startsWith('https://www.googleapis.com/drive/v3/') || l.method !== 'GET');
-  record(bad.length === 0 && log.length > 0, `13 all ${log.length} requests are GETs to drive/v3`, bad.length ? JSON.stringify(bad) : '');
+  record(bad.length === 0 && log.length > 0, `all ${log.length} requests are GETs to drive/v3`, bad.length ? JSON.stringify(bad) : '');
   record(pageErrors.length === 0, 'no page errors', pageErrors.join(' | '));
 
   await ctx.close();

@@ -1,5 +1,6 @@
 // Drive API v3 client. GET only (S8), fixed base URL (S3), pagination (F5),
-// one token renewal on 401 (F20), backoff on 429 / rate-limit 403 / 5xx (F21).
+// one token renewal on 401 (F20), backoff on 429 / rate-limit 403 / 5xx (F21),
+// and an overall time budget per folder lookup (N1).
 (function (root) {
   'use strict';
   const DV = root.DV || (root.DV = {});
@@ -28,7 +29,9 @@
     const removeCachedToken = deps.removeCachedToken;
     const sleep = deps.sleep;
     const random = deps.random || Math.random;
+    const now = deps.now || Date.now;
     const timeoutMs = deps.timeoutMs || 10000;
+    const budgetMs = deps.budgetMs || 8000;
     const maxRetries = deps.maxRetries === undefined ? 4 : deps.maxRetries;
 
     function buildUrl(path, params) {
@@ -41,11 +44,11 @@
       return url.href;
     }
 
-    async function fetchOnce(url, token, resourceKeys) {
+    async function fetchOnce(url, token, resourceKeys, limitMs) {
       const headers = { Authorization: 'Bearer ' + token };
       if (resourceKeys) headers['X-Goog-Drive-Resource-Keys'] = resourceKeys;
       const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), timeoutMs);
+      const timer = setTimeout(() => ctl.abort(), limitMs);
       try {
         return await fetchFn(url, {
           method: 'GET',
@@ -79,13 +82,19 @@
       return Math.min(500 * Math.pow(2, attempt), 8000) + Math.floor(random() * 250);
     }
 
-    async function get(path, params, resourceKeys) {
+    // opts: { resourceKeys, deadline (epoch ms), retries }
+    async function get(path, params, opts) {
+      const o = opts || {};
+      const deadline = o.deadline || now() + budgetMs;
+      const retries = o.retries === undefined ? maxRetries : o.retries;
       const url = buildUrl(path, params);
       let token = await getToken();
       let renewed = false;
       let attempt = 0;
       for (;;) {
-        const res = await fetchOnce(url, token, resourceKeys);
+        const remaining = deadline - now();
+        if (remaining <= 0) throw new DriveError('timeout');
+        const res = await fetchOnce(url, token, o.resourceKeys, Math.min(timeoutMs, remaining));
         if (res.ok) {
           try {
             return await res.json();
@@ -102,10 +111,14 @@
           continue;
         }
         const rateLimited = res.status === 429 || (res.status === 403 && RATE_LIMIT_REASONS.has(reason));
-        if ((rateLimited || res.status >= 500) && attempt < maxRetries) {
-          await sleep(backoffMs(attempt, res.headers && res.headers.get('Retry-After')));
-          attempt++;
-          continue;
+        if ((rateLimited || res.status >= 500) && attempt < retries) {
+          const delay = backoffMs(attempt, res.headers && res.headers.get('Retry-After'));
+          // Do not start a wait that would end after the budget.
+          if (now() + delay < deadline) {
+            await sleep(delay);
+            attempt++;
+            continue;
+          }
         }
         if (rateLimited) throw new DriveError('rate_limited', res.status);
         if (res.status === 403) throw new DriveError('forbidden', 403);
@@ -136,7 +149,7 @@
       };
     }
 
-    async function listPermissions(fileId, resourceKeys) {
+    async function listPermissions(fileId, opts) {
       if (!ID_RE.test(fileId)) throw new DriveError('bad_request');
       const out = [];
       let pageToken;
@@ -148,7 +161,7 @@
           pageSize: 100,
           fields: PERMISSION_FIELDS,
           pageToken,
-        }, resourceKeys);
+        }, opts);
         if (!body || (body.permissions !== undefined && !Array.isArray(body.permissions))) {
           throw new DriveError('bad_response');
         }
@@ -160,9 +173,9 @@
       return out;
     }
 
-    async function getParents(fileId, resourceKeys) {
+    async function getParents(fileId, opts) {
       if (!ID_RE.test(fileId)) throw new DriveError('bad_request');
-      const body = await get('/files/' + fileId, { fields: 'parents', supportsAllDrives: 'true' }, resourceKeys);
+      const body = await get('/files/' + fileId, { fields: 'parents', supportsAllDrives: 'true' }, opts);
       return Array.isArray(body && body.parents) ? body.parents.filter((id) => ID_RE.test(id)) : [];
     }
 
@@ -174,30 +187,43 @@
     }
 
     // Reads every permission on the folder and marks each one direct or
-    // inherited (F6). Drive returns permissionDetails for shared-drive items;
-    // when it is absent (My Drive), a permission is treated as inherited if the
-    // parent folder holds the same permission ID with the same role.
+    // inherited (F6). Drive returns permissionDetails for shared-drive items.
+    // When it is absent (My Drive), inheritance is inferred: a permission is
+    // treated as inherited if the parent folder holds the same permission ID
+    // with the same role, and is flagged `sourceInferred` so the UI can say so.
     async function fetchFolderPermissions(folderId, resourceKey) {
       const rk = resourceKey ? folderId + '/' + resourceKey : null;
-      const perms = await listPermissions(folderId, rk);
+      const deadline = now() + budgetMs;
+      // Started in parallel so My Drive folders cost two round trips, not three.
+      // The parent lookup is best-effort: one attempt, no retries.
+      const parentsP = getParents(folderId, { resourceKeys: rk, deadline, retries: 0 }).catch(() => null);
+      const perms = await listPermissions(folderId, { resourceKeys: rk, deadline });
 
       if (perms.some((p) => p.details && p.details.length)) {
         for (const p of perms) p.source = sourceFromDetails(p.details);
       } else {
         let parentRoles = null;
         try {
-          const parents = await getParents(folderId, rk);
-          parentRoles = new Map();
-          if (parents.length) {
-            for (const pp of await listPermissions(parents[0], null)) parentRoles.set(pp.id, pp.role);
+          const parents = await parentsP;
+          if (parents) {
+            parentRoles = new Map();
+            if (parents.length) {
+              const parentPerms = await listPermissions(parents[0], { deadline, retries: 0 });
+              for (const pp of parentPerms) parentRoles.set(pp.id, pp.role);
+            }
           }
         } catch (e) {
           parentRoles = null;
         }
         for (const p of perms) {
-          if (!parentRoles) p.source = 'unknown';
-          else if (p.role === 'owner') p.source = 'direct';
-          else p.source = p.id && parentRoles.get(p.id) === p.role ? 'inherited' : 'direct';
+          if (!parentRoles) {
+            p.source = 'unknown';
+          } else if (p.role === 'owner') {
+            p.source = 'direct';
+          } else {
+            p.source = p.id && parentRoles.get(p.id) === p.role ? 'inherited' : 'direct';
+            p.sourceInferred = true;
+          }
         }
       }
       for (const p of perms) delete p.details;
@@ -210,7 +236,6 @@
   DV.DriveError = DriveError;
   DV.createDriveApi = createDriveApi;
   DV.driveErrorCode = codeOf;
-  DV.DRIVE_API_BASE = API_BASE;
 
   if (typeof module === 'object' && module.exports) module.exports = { DriveError, createDriveApi, codeOf, API_BASE };
 })(globalThis);

@@ -22,6 +22,9 @@
       allowFileDiscovery: p.allowFileDiscovery === true,
       deleted: p.deleted === true,
       source: ['direct', 'inherited', 'both'].includes(p.source) ? p.source : 'unknown',
+      // True when Drive gave no inheritance details and the source was inferred
+      // by comparing with the parent folder (My Drive).
+      sourceInferred: p.sourceInferred === true,
       level: 'UNKNOWN',
       access: 'unknown',
     };
@@ -133,6 +136,7 @@
     const decisive = active.filter((e) => e.level === level);
     const reason = buildReason(level, active, decisive, userDomain);
     reason.inherited = level !== 'PRIVATE' && decisive.every((e) => e.source === 'inherited');
+    reason.inheritedInferred = reason.inherited && decisive.some((e) => e.sourceInferred);
     return { level, reason, entries };
   }
 

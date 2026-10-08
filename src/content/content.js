@@ -6,7 +6,7 @@
   if (window.top !== window || window.__driveVisibilityLoaded) return;
   window.__driveVisibilityLoaded = true;
 
-  const { t, levelName } = DV.strings;
+  const { t } = DV.strings;
   const L = DV.levels;
   const P = DV.drivePage;
 
@@ -21,6 +21,9 @@
   let pending = null;
   let lastHref = location.href;
   let alive = true;
+  // Set after the first time Drive's account label could not be found, so
+  // later navigations show Unknown at once instead of waiting again.
+  let accountWaitUsed = false;
 
   const banner = createBanner();
 
@@ -56,10 +59,15 @@
   }
 
   async function waitForAccount() {
+    if (accountWaitUsed) return readDriveAccount();
     const deadline = Date.now() + ACCOUNT_WAIT_MS;
     for (;;) {
       const email = readDriveAccount();
-      if (email || Date.now() >= deadline) return email;
+      if (email) return email;
+      if (Date.now() >= deadline) {
+        accountWaitUsed = true;
+        return null;
+      }
       await new Promise((r) => setTimeout(r, 250));
     }
   }
@@ -71,16 +79,7 @@
   }
 
   function localResult(level, reasonKey) {
-    return {
-      level,
-      levelName: levelName(level),
-      reasonText: t(reasonKey),
-      colors: L.colorsFor(level, null),
-      emphasis: false,
-      icon: L.iconFor(level),
-      loading: level === 'LOADING',
-      entries: [],
-    };
+    return L.makeResult(level, t(reasonKey), null);
   }
 
   function update(force, showLoadingNow) {

@@ -45,8 +45,9 @@ test('10. reads every page of a folder with more than 100 permissions (F5)', asy
   });
   const perms = await api.fetchFolderPermissions('folder123');
   assert.equal(perms.length, 250);
-  assert.equal(calls.length, 3);
-  const first = calls[0].url;
+  const permCalls = calls.filter((c) => c.url.pathname.endsWith('/permissions'));
+  assert.equal(permCalls.length, 3);
+  const first = permCalls[0].url;
   assert.equal(first.origin + first.pathname, 'https://www.googleapis.com/drive/v3/files/folder123/permissions');
   assert.equal(first.searchParams.get('supportsAllDrives'), 'true');
   assert.equal(first.searchParams.get('fields'),
@@ -67,7 +68,7 @@ test('every request is GET to the Drive v3 API with no credentials or referrer (
 
 test('resource keys are sent in the documented header', async () => {
   const { api, calls } = setup(() => response(200, { permissions: [perm(1, { permissionDetails: [] })] }));
-  await api.listPermissions('folder123', 'folder123/0-key');
+  await api.listPermissions('folder123', { resourceKeys: 'folder123/0-key' });
   assert.equal(calls[0].init.headers['X-Goog-Drive-Resource-Keys'], 'folder123/0-key');
 });
 
@@ -79,6 +80,7 @@ test('inheritance comes from permissionDetails when present (F6)', async () => {
   ] }));
   const perms = await api.fetchFolderPermissions('folder123');
   assert.deepEqual(perms.map((p) => p.source), ['inherited', 'direct', 'both']);
+  assert.ok(perms.every((p) => !p.sourceInferred));
   assert.ok(perms.every((p) => !('details' in p)));
 });
 
@@ -103,6 +105,7 @@ test('without permissionDetails, inheritance is inferred from the parent folder'
   });
   const perms = await api.fetchFolderPermissions('child1');
   assert.deepEqual(perms.map((p) => [p.id, p.source]), [['o', 'direct'], ['anyoneWithLink', 'inherited'], ['p1', 'direct']]);
+  assert.deepEqual(perms.map((p) => !!p.sourceInferred), [false, true, true], 'inferred sources are flagged');
   assert.ok(calls.every((c) => c.init.method === 'GET'));
 });
 
@@ -180,4 +183,46 @@ test('malformed IDs and paths are rejected before any request', async () => {
 test('unexpected response bodies are errors', async () => {
   const { api } = setup(() => response(200, { permissions: 'nope' }));
   await assert.rejects(api.listPermissions('folder1'), { code: 'bad_response' });
+});
+
+test('the parent lookup starts in parallel with the permission listing', async () => {
+  const { api, calls } = setup((url) => {
+    if (url.pathname.endsWith('/files/child1')) return response(200, { parents: [] });
+    return response(200, { permissions: [perm(1)] });
+  });
+  await api.fetchFolderPermissions('child1');
+  assert.ok(calls[0].url.pathname.endsWith('/files/child1'), 'files.get is issued first, without waiting');
+  assert.ok(calls[1].url.pathname.endsWith('/files/child1/permissions'));
+});
+
+test('the parent lookup is a single attempt, never retried', async () => {
+  const { api, calls, sleeps } = setup((url) => {
+    if (url.pathname.endsWith('/files/child1/permissions')) return response(200, { permissions: [perm(1)] });
+    return response(429, {});
+  });
+  const perms = await api.fetchFolderPermissions('child1');
+  assert.equal(perms[0].source, 'unknown');
+  assert.equal(calls.filter((c) => c.url.pathname.endsWith('/files/child1')).length, 1);
+  assert.deepEqual(sleeps, []);
+});
+
+test('N1: retries stop at the overall time budget', async () => {
+  let clock = 0;
+  const { api, sleeps } = setup(() => response(503, {}), {
+    now: () => clock,
+    sleep: async (ms) => { clock += ms; },
+    budgetMs: 2000,
+  });
+  await assert.rejects(api.getUserEmail(), { code: 'http_error' });
+  assert.ok(clock < 2000, `waited ${clock} ms`);
+});
+
+test('N1: a request is never started after the budget has run out', async () => {
+  let clock = 0;
+  const { api, calls } = setup(() => { clock += 5000; return response(200, { permissions: [perm(1)], nextPageToken: 'n' }); }, {
+    now: () => clock,
+    budgetMs: 8000,
+  });
+  await assert.rejects(api.listPermissions('folder1', { deadline: 8000 }), { code: 'timeout' });
+  assert.equal(calls.length, 2);
 });

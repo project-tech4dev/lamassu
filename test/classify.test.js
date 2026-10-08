@@ -157,3 +157,11 @@ test('empty or missing permission list is Unknown', () => {
   assert.equal(classify(undefined, ctx).level, 'UNKNOWN');
   assert.equal(classify([owner], { userDomain: '' }).level, 'UNKNOWN');
 });
+
+test('8c. inferred inheritance is described as likely, not as fact', () => {
+  const r = classify([owner, { id: 'anyoneWithLink', type: 'anyone', role: 'reader', source: 'inherited', sourceInferred: true }], ctx);
+  assert.ok(r.reason.inherited);
+  assert.ok(r.reason.inheritedInferred);
+  assert.match(text(r), /\(likely inherited from a parent folder\)$/);
+  assert.equal(r.entries.find((e) => e.type === 'anyone').sourceInferred, true);
+});

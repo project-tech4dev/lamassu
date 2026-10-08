@@ -5,12 +5,16 @@
   "description": "Internal Chrome extension that shows who can access the Google Drive folder being viewed.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "test": "node --test 'test/*.test.js'",
     "check": "node scripts/check-source.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "package": "node scripts/check-source.mjs --release && node --test 'test/*.test.js' && node scripts/package.mjs"
+    "package": "node scripts/check-source.mjs --release && node --test 'test/*.test.js' && node scripts/package.mjs",
+    "e2e": "node test/e2e/run.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   }
 }

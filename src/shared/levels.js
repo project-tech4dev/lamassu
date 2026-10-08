@@ -98,9 +98,33 @@
     return (META[level] || META.UNKNOWN).badge;
   }
 
+  // The single shape for every result shown by the banner and popup, whether
+  // built by the service worker, the content script or the popup itself.
+  // Requires DV.strings, which every context loads first.
+  function makeResult(level, reasonText, settings, extra) {
+    return Object.assign({
+      level,
+      levelName: DV.strings.levelName(level),
+      reasonText,
+      code: null,
+      detail: '',
+      colors: colorsFor(level, settings),
+      emphasis: isEmphasized(level, settings),
+      icon: iconFor(level),
+      loading: level === 'LOADING',
+      checkedAt: Date.now(),
+      fetchedAt: null,
+      fromCache: false,
+      accountEmail: null,
+      driveEmail: null,
+      userDomain: null,
+      entries: [],
+    }, extra || {});
+  }
+
   DV.levels = {
     ORDER, META, DEFAULT_COLORS, NEUTRAL_COLOR, CONFIGURABLE,
-    rank, higher, isHexColor, contrast, textColorFor, colorsFor, isEmphasized, iconFor, badgeFor,
+    rank, higher, isHexColor, contrast, textColorFor, colorsFor, isEmphasized, iconFor, badgeFor, makeResult,
   };
 
   if (typeof module === 'object' && module.exports) module.exports = DV.levels;

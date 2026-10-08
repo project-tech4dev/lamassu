@@ -39,5 +39,5 @@
     return svg;
   }
 
-  DV.icons = { create, NAMES: Object.keys(SHAPES) };
+  DV.icons = { create };
 })(globalThis);

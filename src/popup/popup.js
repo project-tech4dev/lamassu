@@ -35,7 +35,8 @@
   }
 
   function showMessage(key) {
-    setSummary('UNKNOWN', DV.strings.levelName('UNKNOWN'), t(key), DV.levels.colorsFor('UNKNOWN'), false, 'help');
+    const r = DV.levels.makeResult('UNKNOWN', t(key), null);
+    setSummary(r.level, r.levelName, r.reasonText, r.colors, r.emphasis, r.icon);
     $('meta').hidden = true;
     $('table-wrap').hidden = true;
     $('refresh').hidden = true;
@@ -87,7 +88,8 @@
       chip.className = 'chip ' + chipClass(e.access);
       chip.textContent = lookup('access.', e.access);
       access.append(chip);
-      tr.append(access, cell(lookup('source.', e.source)));
+      const source = lookup('source.', e.source);
+      tr.append(access, cell(e.sourceInferred ? source + t('source.inferredSuffix') : source));
       rows.append(tr);
     }
     $('caption').textContent = entries.length ? t('popup.tableCaption', { count: entries.length }) : t('popup.noEntries');
@@ -107,6 +109,10 @@
     $('refresh').hidden = false;
     $('signin').hidden = result.code !== 'auth_required';
     renderEntries(result.entries || []);
+    if (result.detail) {
+      $('message').textContent = t('popup.errorDetail', { detail: result.detail });
+      $('message').hidden = false;
+    }
   }
 
   function handle(res) {

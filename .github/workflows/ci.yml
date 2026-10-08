@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+      # Static security checks (S3-S5, S8), then a reproducible package whose
+      # SHA-256 the release reviewer compares with their local build (S9).
+      - run: npm run package
+      - run: sha256sum dist/*.zip | tee dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-package
+          path: dist/
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e

@@ -36,6 +36,7 @@
     'reason.unclassified_one': '{count} permission could not be classified',
     'reason.unclassified_other': '{count} permissions could not be classified',
     'reason.inheritedSuffix': ' (inherited from a parent folder)',
+    'reason.inheritedLikelySuffix': ' (likely inherited from a parent folder)',
 
     // Unknown-level reasons, keyed by error code
     'error.auth_required': 'sign-in needed. Click the extension icon to sign in',
@@ -71,6 +72,7 @@
     'popup.refresh': 'Refresh',
     'popup.signIn': 'Sign in',
     'popup.signInFailed': 'Sign-in failed: {detail}',
+    'popup.errorDetail': 'Details: {detail}',
     'popup.options': 'Settings',
     'popup.noDrive': 'Open a folder in Google Drive to see who can access it.',
     'popup.notFolder': 'This Drive page is not a folder. Open a folder to see who can access it.',
@@ -116,6 +118,7 @@
     'source.inherited': 'Inherited',
     'source.both': 'Direct + inherited',
     'source.unknown': '—',
+    'source.inferredSuffix': ' (inferred)',
 
     // Options page
     'options.title': 'Lamassu: Visibility Guardian settings',
@@ -170,7 +173,7 @@
     } else {
       text = t(reason.key, reason.vars);
     }
-    if (reason.inherited) text += t('reason.inheritedSuffix');
+    if (reason.inherited) text += t(reason.inheritedInferred ? 'reason.inheritedLikelySuffix' : 'reason.inheritedSuffix');
     return text;
   }
 

@@ -73,3 +73,14 @@ test('managed values override local values, which override defaults (C1, C3)', (
   assert.deepEqual(S.merge({}, {}).allowedDomains, [], 'allowed list is empty by default');
   assert.equal(S.merge({}, {}).cacheMinutes, 5, 'cache defaults to 5 minutes');
 });
+
+test('every result has the same shape', () => {
+  const r = L.makeResult('EXTERNAL', 'shared with 1 address outside example.org', S.DEFAULTS, { code: null });
+  for (const k of ['level', 'levelName', 'reasonText', 'code', 'detail', 'colors', 'emphasis', 'icon', 'loading',
+    'checkedAt', 'fetchedAt', 'fromCache', 'accountEmail', 'driveEmail', 'userDomain', 'entries']) {
+    assert.ok(k in r, k);
+  }
+  assert.equal(r.levelName, 'External');
+  assert.equal(L.makeResult('LOADING', 'x', null).loading, true);
+  assert.equal(L.makeResult('UNKNOWN', 'x', S.DEFAULTS).colors.bg, L.NEUTRAL_COLOR);
+});

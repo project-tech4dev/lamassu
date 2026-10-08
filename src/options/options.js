@@ -84,7 +84,10 @@
       colors: {},
     };
     for (const level of L.CONFIGURABLE) {
-      if (!colorInputs[level].input.disabled) raw.colors[level] = colorInputs[level].input.value;
+      // Only store colors that differ from the default, so a later release
+      // that changes a default still reaches users who once clicked Save.
+      const value = colorInputs[level].input.value.toLowerCase();
+      if (!colorInputs[level].input.disabled && value !== L.DEFAULT_COLORS[level]) raw.colors[level] = value;
     }
     const { values, invalidDomains, invalidCache } = S.sanitize(raw);
     if (invalidDomains.length) return showStatus(t('options.invalidDomains', { list: invalidDomains.join(', ') }), true);

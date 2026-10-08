@@ -6,11 +6,13 @@ importScripts(
   '../shared/domain.js',
   '../shared/classify.js',
   '../shared/settings.js',
+  '../shared/status.js',
   './drive-api.js'
 );
 
 const { DriveError, driveErrorCode } = DV;
 const CACHE_PREFIX = 'perm:';
+const CACHE_INDEX_KEY = 'permIndex';
 const IDENTITY_KEY = 'identity';
 const MAX_CACHE_ENTRIES = 200;
 const DRIVE_ORIGIN = 'https://drive.google.com/';
@@ -31,7 +33,11 @@ async function getToken(interactive) {
     throw err;
   }
   const token = typeof result === 'string' ? result : result && result.token;
-  if (!token) throw new DriveError('auth_required');
+  if (!token) {
+    const err = new DriveError('auth_required');
+    err.detail = 'Chrome returned no token';
+    throw err;
+  }
   return token;
 }
 
@@ -85,16 +91,31 @@ async function clearAccountData() {
 }
 
 // ---- Cache (F7) ------------------------------------------------------------
+// Caching is an optimisation: any storage failure is ignored so it can never
+// turn a successful lookup into Unknown. A small index ({key: fetchedAt}) is
+// kept so eviction never has to read every cached permission list.
 
 const folderInflight = new Map();
 
-async function writeCache(key, entry) {
-  await chrome.storage.session.set({ [key]: entry });
-  const all = await chrome.storage.session.get(null);
-  const keys = Object.keys(all).filter((k) => k.startsWith(CACHE_PREFIX));
-  if (keys.length > MAX_CACHE_ENTRIES) {
-    keys.sort((a, b) => (all[a].fetchedAt || 0) - (all[b].fetchedAt || 0));
-    await chrome.storage.session.remove(keys.slice(0, keys.length - MAX_CACHE_ENTRIES));
+async function writeCache(key, entry, ttlMs) {
+  try {
+    await chrome.storage.session.set({ [key]: entry });
+    const index = (await chrome.storage.session.get(CACHE_INDEX_KEY))[CACHE_INDEX_KEY] || {};
+    index[key] = entry.fetchedAt;
+    const evict = DV.status.keysToEvict(index, ttlMs, MAX_CACHE_ENTRIES, Date.now());
+    for (const k of evict) delete index[k];
+    if (evict.length) await chrome.storage.session.remove(evict);
+    await chrome.storage.session.set({ [CACHE_INDEX_KEY]: index });
+  } catch (e) {
+    // Quota or storage error: carry on without caching this folder.
+  }
+}
+
+async function removeCache(key) {
+  try {
+    await chrome.storage.session.remove(key);
+  } catch (e) {
+    // Nothing else to do.
   }
 }
 
@@ -104,9 +125,10 @@ async function getFolderData(folderId, resourceKey, identity, settings, force) {
 
   if (!force && ttl > 0) {
     const hit = (await chrome.storage.session.get(key))[key];
-    if (hit && hit.account === identity.email && Date.now() - hit.fetchedAt < ttl) {
+    if (DV.status.isCacheHit(hit, identity.email, ttl, Date.now())) {
       return { permissions: hit.permissions, fetchedAt: hit.fetchedAt, fromCache: true };
     }
+    if (hit) await removeCache(key);
   }
 
   const flightKey = identity.email + '|' + folderId;
@@ -115,7 +137,7 @@ async function getFolderData(folderId, resourceKey, identity, settings, force) {
   const p = (async () => {
     const permissions = await api.fetchFolderPermissions(folderId, resourceKey);
     const entry = { account: identity.email, fetchedAt: Date.now(), permissions };
-    if (ttl > 0) await writeCache(key, entry);
+    if (ttl > 0) await writeCache(key, entry, ttl);
     return { permissions, fetchedAt: entry.fetchedAt, fromCache: false };
   })();
   folderInflight.set(flightKey, p);
@@ -129,24 +151,8 @@ async function getFolderData(folderId, resourceKey, identity, settings, force) {
 // ---- Status ----------------------------------------------------------------
 
 function buildResult(level, reason, settings, extra) {
-  const levelName = DV.strings.levelName(level);
-  const reasonText = DV.strings.describeReason(reason);
-  return Object.assign({
-    level,
-    levelName,
-    reasonText,
-    code: reason && reason.key && reason.key.startsWith('error.') ? reason.key.slice(6) : null,
-    colors: DV.levels.colorsFor(level, settings),
-    emphasis: DV.levels.isEmphasized(level, settings),
-    icon: DV.levels.iconFor(level),
-    checkedAt: Date.now(),
-    fetchedAt: null,
-    fromCache: false,
-    accountEmail: null,
-    driveEmail: null,
-    userDomain: null,
-    entries: [],
-  }, extra || {});
+  const code = reason && reason.key && reason.key.startsWith('error.') ? reason.key.slice(6) : null;
+  return DV.levels.makeResult(level, DV.strings.describeReason(reason), settings, Object.assign({ code }, extra));
 }
 
 function unknown(code, settings, extra) {
@@ -164,22 +170,21 @@ async function getStatus(msg) {
   try {
     identity = await ensureIdentity();
   } catch (e) {
-    return unknown(driveErrorCode(e) === 'auth_required' ? 'auth_required' : 'identity_failed', settings, { driveEmail });
+    // Keep the real cause (offline, rate-limited, sign-in needed, ...).
+    return unknown(DV.status.knownErrorCode(driveErrorCode(e), 'identity_failed'), settings,
+      { driveEmail, detail: (e && e.detail) || '' });
   }
   const base = { accountEmail: identity.email, driveEmail, userDomain: identity.domain };
 
-  // U3: personal accounts never get an internal domain.
-  if (DV.domain.isPersonalDomain(identity.domain)) return unknown('personal_account', settings, base);
-  // U4: never show a level computed for a different account than Drive shows.
-  if (!driveEmail) return unknown('account_unconfirmed', settings, base);
-  if (driveEmail !== identity.email) return unknown('account_mismatch', settings, base);
+  const block = DV.status.accountBlock(identity, driveEmail);
+  if (block) return unknown(block, settings, base);
 
   let data;
   try {
     data = await getFolderData(folderId, resourceKey, identity, settings, !!msg.force);
   } catch (e) {
-    await chrome.storage.session.remove(CACHE_PREFIX + folderId);
-    return unknown(driveErrorCode(e), settings, base);
+    await removeCache(CACHE_PREFIX + folderId);
+    return unknown(DV.status.knownErrorCode(driveErrorCode(e), 'internal_error'), settings, base);
   }
 
   const c = DV.classify(data.permissions, { userDomain: identity.domain, allowedDomains: settings.allowedDomains });
@@ -220,6 +225,12 @@ async function setBadge(tabId, result) {
 }
 
 // ---- Messaging -------------------------------------------------------------
+// Messages (all objects with a string `type`):
+//   content -> sw     dv:getStatus {folderId, resourceKey, driveEmail, force} -> result
+//   content -> sw     dv:clear                                              (no reply)
+//   popup   -> sw     dv:signIn                                             -> {ok, code, detail}
+//   popup   -> tab    dv:getDetails / dv:refresh                            -> {folder, result}
+// `result` is always built by DV.levels.makeResult.
 
 function fromDrive(sender) {
   return sender.id === chrome.runtime.id && !!sender.tab && typeof sender.url === 'string' &&
@@ -231,8 +242,15 @@ function fromExtensionPage(sender) {
     sender.url.startsWith(chrome.runtime.getURL(''));
 }
 
+// Unexpected exceptions are reported with their message (never an email
+// address: none of this code puts one in an error) so they can be diagnosed
+// from the popup, since S7 rules out logging.
+function errorDetail(e) {
+  return String((e && e.message) || e || '').slice(0, 200);
+}
+
 function reply(promise, sendResponse, fallback) {
-  promise.then(sendResponse, () => sendResponse(fallback()));
+  promise.then(sendResponse, (e) => sendResponse(fallback(errorDetail(e))));
   return true;
 }
 
@@ -244,7 +262,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return reply(
       getStatus(msg).then((r) => { setBadge(tabId, r); return r; }),
       sendResponse,
-      () => unknown('internal_error', null)
+      (detail) => unknown('internal_error', null, { detail })
     );
   }
   if (msg.type === 'dv:clear' && fromDrive(sender)) {
@@ -252,12 +270,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return false;
   }
   if (msg.type === 'dv:signIn' && fromExtensionPage(sender)) {
-    return reply(signIn(), sendResponse, () => ({ ok: false, code: 'internal_error' }));
+    return reply(signIn(), sendResponse, (detail) => ({ ok: false, code: 'internal_error', detail }));
   }
   return false;
 });
 
 // U2 / acceptance test 20: a Chrome sign-in change discards the domain and cache.
 chrome.identity.onSignInChanged.addListener(() => {
-  clearAccountData();
+  clearAccountData().catch(() => {});
 });

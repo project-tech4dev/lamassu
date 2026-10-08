@@ -3,6 +3,7 @@
   "name": "Lamassu: Visibility Guardian",
   "short_name": "Lamassu",
   "version": "1.0.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsoiy1h6yDNc93FIN2MV2BvNv+myTN95YHC5gWFQ285qFB4iQfcLXGH97f+Z6QSf8CoiSvgXe31tddgvu2Yg0BOIAWoj3B6ijE9jta1OtVh5V6PBjLV9aFt11QF5xx20gKfoha36F8+F38DiXAU68PvCSPgbF7qClvQJipWP9Iv+rofhEfKtHBNCc5M+HapH6gjG3ICR0Y4jKl//JbPbakznGPOzxtF9GJ0Oyu8PkEwB9C6myAudT2ZGFIJm4oPnNXwmloXAFwsWMfgCtMjxrdkzoDI9EXOltrvBd8Ud3b9jfhamAquoC8r+Q9uPOr6Dk6eEcVv6ZNf400Cl/CnFFMwIDAQAB",
   "description": "Shows who can access the Google Drive folder you are viewing. Read-only: never changes sharing, never reads file contents.",
   "minimum_chrome_version": "116",
   "permissions": ["identity", "storage"],

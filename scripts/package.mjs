@@ -16,7 +16,14 @@ const centrals = [];
 let offset = 0;
 
 for (const rel of files) {
-  const data = readFileSync(join(ROOT, rel));
+  let data = readFileSync(join(ROOT, rel));
+  if (rel === 'manifest.json') {
+    // The "key" field pins the extension ID for unpacked installs. The Chrome
+    // Web Store rejects uploads that contain it, so it is left out of the zip.
+    const manifest = JSON.parse(data.toString('utf8'));
+    delete manifest.key;
+    data = Buffer.from(JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+  }
   const name = Buffer.from(rel, 'utf8');
   const crc = crc32(data);
 

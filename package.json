@@ -12,7 +12,8 @@
     "check": "node scripts/check-source.mjs",
     "icons": "node scripts/make-icons.mjs",
     "package": "node scripts/check-source.mjs --release && node --test 'test/*.test.js' && node scripts/package.mjs",
-    "e2e": "node test/e2e/run.js"
+    "e2e": "node test/e2e/run.js",
+    "crx": "node scripts/check-source.mjs --release && node --test 'test/*.test.js' && node scripts/crx.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0"

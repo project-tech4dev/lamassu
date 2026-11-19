@@ -76,7 +76,7 @@ npm run icons       # regenerate icons/*.png (only needed if the icon design cha
    - **Trust all internal apps.** Under *Settings*, check **Trust internal apps**. This allows every app owned by your organization, not just this one.
 
    This step is required if Drive is a restricted service in your domain, or if unconfigured third-party apps are blocked. Otherwise the extension may work without it, but configuring it explicitly keeps it working if those settings change later. Google has renamed these links before, so if the labels differ, see Google's help page [Control which apps access Google Workspace data](https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data).
-5. **Deploy** by force-installing it with *Chrome browser*, *Apps & extensions*, *Users & browsers*, using the Web Store item ID or a self-hosted CRX (see below).
+5. **Deploy** by force-installing it from *Devices*, *Chrome*, *Apps & extensions*, *Users & browsers*, using the Web Store item ID or a self-hosted CRX (see below).
 
 Authentication uses `chrome.identity.getAuthToken`, which issues tokens for the Google account signed in to the **Chrome profile**. Users must be signed in to Chrome with their Workspace account. Managed Chrome profiles already are. On first use, the banner shows *Unknown: sign-in needed*. Clicking the toolbar icon and then **Sign in** shows Google's consent prompt once.
 
@@ -162,7 +162,12 @@ The workflow stops if the tag doesn't match both versions. Chrome only picks up 
 
 ### Installing in the Admin console
 
-In the Admin console, go to *Chrome browser*, *Apps & extensions*, *Users & browsers*. Choose the organizational unit, click **+**, then **Add Chrome app or extension by ID**. Choose **From a custom URL**, enter the ID `illeibibgkgdeofodggpkgflfhlpphde` and the update URL above, and set the installation policy to **Force install**.
+1. In the Admin console, go to *Menu*, then *Devices*, then *Chrome*, then *Apps & extensions*. (With Chrome Enterprise Core it is *Menu*, then *Chrome browser*, then *Apps & extensions*.)
+2. At the top, click **Users & browsers**.
+3. On the left, choose the organizational unit, or the top one for everyone.
+4. Click the **Add** button (the **+** at the bottom right), then **Add Chrome app or extension by ID**.
+5. Enter the ID `illeibibgkgdeofodggpkgflfhlpphde`, choose **From a custom URL**, enter the update URL above, and click **Save**.
+6. Click the extension in the list. On the right, under *Installation policy*, choose **Force install**, then click **Save**.
 
 Unmanaged browsers can't install a self-hosted CRX. They need the Web Store, or Load unpacked in Developer mode.
 

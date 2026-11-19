@@ -1,0 +1,64 @@
+name: Release
+
+# Builds the signed CRX and publishes it with updates.xml to GitHub Pages:
+#   https://project-tech4dev.github.io/lamassu/updates.xml
+# Runs when a version tag (v1.2.3) is pushed. The tag must match the version in
+# manifest.json and package.json.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Check the tag matches the version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          manifest=$(node -p "require('./manifest.json').version")
+          pkg=$(node -p "require('./package.json').version")
+          if [ "$tag" != "$manifest" ] || [ "$tag" != "$pkg" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match manifest.json ($manifest) and package.json ($pkg)"
+            exit 1
+          fi
+      - name: Build and sign the CRX
+        env:
+          EXTENSION_KEY: ${{ secrets.EXTENSION_KEY }}
+        run: |
+          if [ -z "$EXTENSION_KEY" ]; then echo "The EXTENSION_KEY secret is not set"; exit 1; fi
+          umask 077
+          printf '%s\n' "$EXTENSION_KEY" > "$RUNNER_TEMP/extension-key.pem"
+          LAMASSU_KEY="$RUNNER_TEMP/extension-key.pem" npm run crx -- "https://project-tech4dev.github.io/lamassu/"
+          rm -f "$RUNNER_TEMP/extension-key.pem"
+          mkdir site
+          cp dist/*.crx dist/updates.xml site/
+          (cd site && sha256sum * > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}updates.xml
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -165,7 +165,7 @@ The workflow stops if the tag doesn't match both versions. Chrome only picks up 
 1. In the Admin console, go to *Menu*, then *Devices*, then *Chrome*, then *Apps & extensions*. (With Chrome Enterprise Core it is *Menu*, then *Chrome browser*, then *Apps & extensions*.)
 2. At the top, click **Users & browsers**.
 3. On the left, choose the organizational unit, or the top one for everyone.
-4. Click the **Add** button (the **+** at the bottom right), then **Add Chrome app or extension by ID**.
+4. Click the **Add** button, then **Add Chrome app or extension by ID**.
 5. Enter the ID `illeibibgkgdeofodggpkgflfhlpphde`, choose **From a custom URL**, enter the update URL above, and click **Save**.
 6. Click the extension in the list. On the right, under *Installation policy*, choose **Force install**, then click **Save**.
 
